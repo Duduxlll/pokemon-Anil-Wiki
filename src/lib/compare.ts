@@ -248,7 +248,7 @@ async function buildProfile(
   chart: Chart,
   hasStatus: boolean
 ): Promise<MonProfile> {
-  const path = await getEvolutionPath(detail.name);
+  const path = await getEvolutionPath(detail.speciesName);
   const finalStage = path.stages[path.stages.length - 1];
   const finalDetail =
     finalStage.name === detail.name ? detail : await getPokemonDetail(finalStage.name);

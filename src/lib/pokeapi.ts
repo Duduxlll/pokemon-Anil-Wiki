@@ -9,6 +9,7 @@ import {
   PokemonTypeName,
   TypeDamageRelations,
 } from "./types";
+import { normalizePokemonName, resolvePokemonName } from "./pokemonName";
 
 const API_BASE = "https://pokeapi.co/api/v2";
 const TOTAL_POKEMON_COUNT = 1025; // Pokédex nacional completa (Gen 1 a Gen 9)
@@ -62,6 +63,7 @@ export async function getPokemonNameList(): Promise<PokemonListItem[]> {
 interface RawPokemon {
   id: number;
   name: string;
+  species: { name: string };
   height: number;
   weight: number;
   sprites: {
@@ -117,6 +119,7 @@ function toDetail(raw: RawPokemon): PokemonDetail {
   return {
     id: raw.id,
     name: raw.name,
+    speciesName: raw.species.name,
     types: raw.types.map((t) => t.type.name as PokemonTypeName),
     sprite: raw.sprites.front_default ?? "",
     spriteShiny: raw.sprites.front_shiny,
@@ -135,9 +138,9 @@ function toDetail(raw: RawPokemon): PokemonDetail {
 export async function getPokemonDetail(
   idOrName: string | number
 ): Promise<PokemonDetail> {
-  const raw = await apiFetch<RawPokemon>(
-    `/pokemon/${String(idOrName).toLowerCase()}`
-  );
+  const identifier =
+    typeof idOrName === "number" ? String(idOrName) : resolvePokemonName(idOrName);
+  const raw = await apiFetch<RawPokemon>(`/pokemon/${identifier}`);
   return toDetail(raw);
 }
 
@@ -260,7 +263,7 @@ interface RawSpecies {
 // Retorna o caminho evolutivo linear que passa pelo Pokémon informado
 // (base → ... → forma final), com o nível em que cada estágio evolui.
 export async function getEvolutionPath(name: string): Promise<EvolutionPath> {
-  const id = String(name).toLowerCase();
+  const id = normalizePokemonName(name);
   const species = await apiFetch<RawSpecies>(`/pokemon-species/${id}`);
   if (!species.evolution_chain?.url) {
     return { stages: [{ name: id, minLevel: null }], currentIndex: 0 };

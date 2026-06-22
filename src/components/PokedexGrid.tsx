@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { PokemonSummary, PokemonTypeName } from "@/lib/types";
 import { TYPE_LABELS_PT, TYPE_ORDER } from "@/lib/typeMeta";
+import { normalizePokemonName } from "@/lib/pokemonName";
 import PokemonCard from "./PokemonCard";
 import TypeBadge from "./TypeBadge";
 
@@ -18,19 +19,16 @@ export default function PokedexGrid({
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
+    const normalizedQuery = normalizePokemonName(query);
     return pokemons.filter((p) => {
       const matchesQuery =
         query.trim() === "" ||
-        p.name.toLowerCase().includes(query.trim().toLowerCase()) ||
+        normalizePokemonName(p.name).includes(normalizedQuery) ||
         String(p.id).includes(query.trim());
       const matchesType = !activeType || p.types.includes(activeType);
       return matchesQuery && matchesType;
     });
   }, [pokemons, query, activeType]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [query, activeType]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -45,13 +43,19 @@ export default function PokedexGrid({
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
           placeholder="Pesquisar por nome ou número (ex: Pikachu, 25)"
           className="glass-input w-full rounded-2xl px-4 py-3 text-base"
         />
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setActiveType(null)}
+            onClick={() => {
+              setActiveType(null);
+              setPage(1);
+            }}
             className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all ${
               activeType === null
                 ? "bg-white text-[#0a1130] shadow-lg"
@@ -63,7 +67,10 @@ export default function PokedexGrid({
           {TYPE_ORDER.map((t) => (
             <button
               key={t}
-              onClick={() => setActiveType(t === activeType ? null : t)}
+              onClick={() => {
+                setActiveType(t === activeType ? null : t);
+                setPage(1);
+              }}
               className={`rounded-full transition-all ${
                 activeType === t
                   ? "scale-105 ring-2 ring-white/80"

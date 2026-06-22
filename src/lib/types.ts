@@ -43,6 +43,7 @@ export interface PokemonSummary {
 }
 
 export interface PokemonDetail extends PokemonSummary {
+  speciesName: string;
   height: number;
   weight: number;
   stats: PokemonStat[];

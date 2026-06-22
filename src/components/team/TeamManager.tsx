@@ -4,6 +4,7 @@ import { CSSProperties, useState } from "react";
 import { motion } from "framer-motion";
 import { useTeamStorage } from "@/lib/useTeamStorage";
 import { usePokemonDetails } from "@/lib/usePokemonDetails";
+import { normalizePokemonName } from "@/lib/pokemonName";
 import PokemonAutocomplete from "../PokemonAutocomplete";
 import PokemonMiniCard from "./PokemonMiniCard";
 import CompareTool from "./CompareTool";
@@ -31,16 +32,16 @@ export default function TeamManager() {
 
   function handleAdd() {
     if (!newName.trim()) return;
-    addPokemon(newName.trim().toLowerCase(), Math.max(1, Math.min(100, Number(newLevel) || 1)));
+    addPokemon(normalizePokemonName(newName), Math.max(1, Math.min(100, Number(newLevel) || 1)));
     setNewName("");
     setNewLevel("5");
   }
 
   const teamWithDetails = team.map((e) => ({
     id: e.id,
-    name: e.name,
+    name: normalizePokemonName(e.name),
     level: e.level,
-    detail: detailsMap[e.name.toLowerCase()]?.data ?? null,
+    detail: detailsMap[normalizePokemonName(e.name)]?.data ?? null,
   }));
 
   if (!loaded) {
@@ -107,8 +108,8 @@ export default function TeamManager() {
                 entry ? (
                   <PokemonMiniCard
                     key={entry.id}
-                    detail={detailsMap[entry.name.toLowerCase()]?.data ?? null}
-                    status={detailsMap[entry.name.toLowerCase()]?.status}
+                    detail={detailsMap[normalizePokemonName(entry.name)]?.data ?? null}
+                    status={detailsMap[normalizePokemonName(entry.name)]?.status}
                     level={entry.level}
                     actions={
                       <div className="flex flex-col items-center gap-1.5">
@@ -156,7 +157,7 @@ export default function TeamManager() {
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {box.map((entry) => {
-                  const state = detailsMap[entry.name.toLowerCase()];
+                  const state = detailsMap[normalizePokemonName(entry.name)];
                   return (
                     <PokemonMiniCard
                       key={entry.id}

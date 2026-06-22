@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PokemonDetail } from "./types";
+import { normalizePokemonName } from "./pokemonName";
 
 type DetailState = { status: "loading" | "ready" | "error"; data: PokemonDetail | null };
 
@@ -13,7 +14,7 @@ export function usePokemonDetails(names: string[]) {
 
   useEffect(() => {
     names.forEach((name) => {
-      const key = name.toLowerCase();
+      const key = normalizePokemonName(name);
       if (requested.current.has(key)) return;
       requested.current.add(key);
 

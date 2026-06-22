@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeEncounter } from "@/lib/compare";
+import { normalizePokemonName } from "@/lib/pokemonName";
 
 export async function POST(req: NextRequest) {
   let body: {
@@ -12,7 +13,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Requisição inválida." }, { status: 400 });
   }
 
-  const name = body.wild?.name?.trim().toLowerCase();
+  const rawName = body.wild?.name?.trim() ?? "";
+  const name = normalizePokemonName(rawName);
   const level = Number(body.wild?.level);
   const team = Array.isArray(body.team) ? body.team : [];
 
@@ -27,12 +29,12 @@ export async function POST(req: NextRequest) {
     const result = await analyzeEncounter(
       name,
       level,
-      team.map((t) => ({ name: String(t.name).toLowerCase(), level: Number(t.level) || 1 }))
+      team.map((t) => ({ name: normalizePokemonName(String(t.name)), level: Number(t.level) || 1 }))
     );
     return NextResponse.json(result);
   } catch {
     return NextResponse.json(
-      { error: `Não encontrei o Pokémon "${name}". Confira o nome.` },
+      { error: `Não encontrei o Pokémon "${rawName}". Confira o nome.` },
       { status: 404 }
     );
   }

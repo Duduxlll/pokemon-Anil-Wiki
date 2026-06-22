@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PokemonListItem } from "@/lib/types";
+import { normalizePokemonName } from "@/lib/pokemonName";
 
 function capitalize(name: string) {
   return name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, " ");
@@ -39,11 +40,13 @@ export default function PokemonAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const query = value.trim().toLowerCase();
+  const query = normalizePokemonName(value);
   const suggestions =
     query.length === 0
       ? []
-      : allNames.filter((p) => p.name.startsWith(query)).slice(0, 8);
+      : allNames
+          .filter((p) => normalizePokemonName(p.name).startsWith(query))
+          .slice(0, 8);
 
   return (
     <div ref={containerRef} className="relative">
