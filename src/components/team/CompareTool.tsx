@@ -32,6 +32,22 @@ const DECISION = {
   "nao-vale": { label: "NÃO VALE TROCAR", cls: "border-rose-400/40 bg-rose-500/15 text-rose-100" },
 } as const;
 
+function verdictMeta(verdict: EncounterAnalysis["verdict"]) {
+  if (verdict.action === "adicionar") {
+    return {
+      label: "VALE ADICIONAR",
+      cls: "border-sky-400/40 bg-sky-500/15 text-sky-100",
+    };
+  }
+  if (verdict.action === "guardar") {
+    return {
+      label: "GUARDAR / TREINAR",
+      cls: "border-amber-400/40 bg-amber-500/15 text-amber-100",
+    };
+  }
+  return DECISION[verdict.decision];
+}
+
 function noteColor(v: number) {
   if (v < 4) return "#f43f5e";
   if (v < 7) return "#f59e0b";
@@ -194,10 +210,71 @@ function ProfileCard({ p, label, color }: { p: MonProfile; label: string; color:
         )}
       </div>
       {p.willEvolve && (
-        <p className="text-[11px] text-white/50">
-          Evolui até {capitalize(p.finalName)} ({p.finalBst} de total base)
-          {p.nextMinLevel ? `, a partir do nível ${p.nextMinLevel}` : ""}.
-        </p>
+        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/55">
+          <p>
+            Próxima evolução: {p.nextName ? capitalize(p.nextName) : capitalize(p.finalName)}
+            {p.nextBst ? ` (${p.nextBst} base)` : ""}
+            {p.nextMinLevel ? ` no nível ${p.nextMinLevel}` : ""}.
+          </p>
+          <p>
+            Forma final: {capitalize(p.finalName)} ({p.finalBst} base)
+            {p.evolutionBoost > 0 ? ` · ganho +${p.evolutionBoost}` : ""}.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function reportToneClass(tone: EncounterAnalysis["detailedReport"]["sections"][number]["tone"]) {
+  if (tone === "good") return "border-emerald-400/25 bg-emerald-500/10";
+  if (tone === "warn") return "border-amber-400/25 bg-amber-500/10";
+  return "border-white/10 bg-white/5";
+}
+
+function DetailedReportView({ report }: { report: EncounterAnalysis["detailedReport"] }) {
+  return (
+    <div className="glass rounded-2xl p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-white/80">
+          Leitura completa da decisão
+        </h3>
+        <p className="mt-1 text-sm font-semibold text-white">{report.headline}</p>
+        <p className="mt-1 text-sm text-white/65">{report.recommendation}</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+        {report.sections.map((section) => (
+          <div key={section.title} className={`rounded-xl border p-3 ${reportToneClass(section.tone)}`}>
+            <h4 className="mb-2 text-xs font-black uppercase tracking-wide text-white/70">
+              {section.title}
+            </h4>
+            <ul className="flex flex-col gap-1.5 text-sm text-white/78">
+              {section.points.map((point) => (
+                <li key={point} className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/45" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {report.alternatives.length > 0 && (
+        <div className="mt-3 rounded-xl border border-violet-300/20 bg-violet-500/10 p-3">
+          <h4 className="mb-2 text-xs font-black uppercase tracking-wide text-violet-200/85">
+            Caminho recomendado
+          </h4>
+          <ul className="flex flex-col gap-1.5 text-sm text-white/75">
+            {report.alternatives.map((alt) => (
+              <li key={alt} className="flex gap-2">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-200/70" />
+                <span>{alt}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -300,6 +377,7 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
                   Por enquanto, aqui está o perfil do {capitalize(result.wild.name)}:
                 </p>
                 <ProfileCard p={result.wild} label="Selvagem" color="#f59e0b" />
+                <DetailedReportView report={result.detailedReport} />
                 <div className="glass rounded-2xl p-4">
                   <WildMovesView moves={result.wildMoves} />
                 </div>
@@ -307,9 +385,9 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
             ) : (
               <>
                 {/* Veredito */}
-                <div className={`rounded-2xl border p-4 ${DECISION[result.verdict.decision].cls}`}>
+                <div className={`rounded-2xl border p-4 ${verdictMeta(result.verdict).cls}`}>
                   <span className="text-xs font-black tracking-wider opacity-80">
-                    {DECISION[result.verdict.decision].label}
+                    {verdictMeta(result.verdict).label}
                   </span>
                   <p className="mt-1 text-base font-bold">{result.verdict.headline}</p>
                   <p className="mt-1 text-sm opacity-90">{result.verdict.summary}</p>
@@ -322,39 +400,74 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
                   <NoteBar label="Encaixe no time" value={result.scores.fit} />
                 </div>
 
+                <DetailedReportView report={result.detailedReport} />
+
                 {/* Melhor troca */}
-                {result.bestSwap && (
+                {result.verdict.action === "adicionar" && result.teamSpace?.hasOpenSlot ? (
+                  <div className="glass rounded-2xl p-4">
+                    <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-sky-300">
+                      Vaga livre na equipe
+                    </h3>
+                    <p className="text-sm text-white/70">
+                      Como ainda há espaço, a melhor jogada é adicionar {capitalize(result.wild.name)}
+                      sem remover ninguém. O placar do time iria de {result.bestSwap?.scoreBefore ?? 0} para{" "}
+                      {result.teamSpace.scoreAfter}.
+                    </p>
+                  </div>
+                ) : result.bestSwap && (
                   <div className="glass rounded-2xl p-4">
                     <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-violet-300">
-                      Melhor troca possível
+                      {result.bestSwap.recommended ? "Troca recomendada" : "Melhor cenário calculado"}
                     </h3>
-                    {result.bestSwap.delta > 0 ? (
-                      <div className="flex flex-wrap items-center justify-center gap-3 text-center">
-                        <div className="flex flex-col items-center">
-                          {result.bestSwap.outImage && (
-                            <Image src={result.bestSwap.outImage} alt={result.bestSwap.outName} width={64} height={64} unoptimized className="opacity-70" />
-                          )}
-                          <span className="text-xs text-rose-300">sai {capitalize(result.bestSwap.outName)}</span>
-                        </div>
-                        <span className="text-2xl text-white/40">→</span>
-                        <div className="flex flex-col items-center">
-                          {result.wild.image && (
-                            <Image src={result.wild.image} alt={result.wild.name} width={72} height={72} unoptimized />
-                          )}
-                          <span className="text-xs text-emerald-300">entra {capitalize(result.wild.name)}</span>
-                        </div>
-                        <div className="ml-2 rounded-xl bg-emerald-500/15 px-3 py-2 text-sm font-bold text-emerald-200">
-                          Time +{result.bestSwap.delta} pts
-                          <div className="text-[10px] font-normal text-white/55">
-                            {result.bestSwap.scoreBefore} → {result.bestSwap.scoreAfter}
+                    {result.bestSwap.recommended ? (
+                      <>
+                        <div className="flex flex-wrap items-center justify-center gap-3 text-center">
+                          <div className="flex flex-col items-center">
+                            {result.bestSwap.outImage && (
+                              <Image src={result.bestSwap.outImage} alt={result.bestSwap.outName} width={64} height={64} unoptimized className="opacity-70" />
+                            )}
+                            <span className="text-xs text-rose-300">sai {capitalize(result.bestSwap.outName)}</span>
+                          </div>
+                          <span className="text-2xl text-white/40">→</span>
+                          <div className="flex flex-col items-center">
+                            {result.wild.image && (
+                              <Image src={result.wild.image} alt={result.wild.name} width={72} height={72} unoptimized />
+                            )}
+                            <span className="text-xs text-emerald-300">entra {capitalize(result.wild.name)}</span>
+                          </div>
+                          <div className="ml-2 rounded-xl bg-emerald-500/15 px-3 py-2 text-sm font-bold text-emerald-200">
+                            Time +{result.bestSwap.delta} pts
+                            <div className="text-[10px] font-normal text-white/55">
+                              {result.bestSwap.scoreBefore} → {result.bestSwap.scoreAfter}
+                            </div>
+                            <div className="text-[10px] font-normal text-white/55">
+                              confiança {result.bestSwap.confidence}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                        {result.bestSwap.reasons.length > 0 && (
+                          <ul className="mt-3 flex flex-col gap-1 text-xs text-emerald-100/85">
+                            {result.bestSwap.reasons.slice(0, 3).map((reason) => (
+                              <li key={reason}>• {reason}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     ) : (
-                      <p className="text-sm text-white/70">
-                        Nenhuma troca melhora o time — todos os seus 6 já rendem mais
-                        que o {capitalize(result.wild.name)} nesse encaixe.
-                      </p>
+                      <div className="text-sm text-white/70">
+                        <p>
+                          Eu não recomendo mexer no time. A melhor simulação seria tirar{" "}
+                          {capitalize(result.bestSwap.outName)}, mas o ganho é {result.bestSwap.delta > 0 ? `+${result.bestSwap.delta}` : result.bestSwap.delta}
+                          {" "}e a margem segura seria +{result.bestSwap.minDeltaRequired}.
+                        </p>
+                        {result.bestSwap.warnings.length > 0 && (
+                          <ul className="mt-2 flex flex-col gap-1 text-xs text-amber-100/85">
+                            {result.bestSwap.warnings.slice(0, 3).map((warning) => (
+                              <li key={warning}>• {warning}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     )}
                     <details className="mt-3">
                       <summary className="cursor-pointer text-xs text-white/50 hover:text-white/80">
@@ -364,11 +477,17 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
                         {[...result.bestSwap.options]
                           .sort((a, b) => b.delta - a.delta)
                           .map((o) => (
-                            <li key={o.outName} className="flex justify-between rounded-lg bg-white/5 px-2 py-1">
-                              <span className="capitalize text-white/70">sai {capitalize(o.outName)}</span>
-                              <span className={o.delta > 0 ? "text-emerald-300" : "text-white/40"}>
-                                {o.delta > 0 ? "+" : ""}{o.delta}
-                              </span>
+                            <li key={o.outName} className="rounded-lg bg-white/5 px-2 py-1">
+                              <div className="flex justify-between gap-2">
+                                <span className="capitalize text-white/70">sai {capitalize(o.outName)}</span>
+                                <span className={o.recommended ? "text-emerald-300" : o.delta > 0 ? "text-amber-300" : "text-white/40"}>
+                                  {o.delta > 0 ? "+" : ""}{o.delta}
+                                </span>
+                              </div>
+                              <div className="mt-0.5 text-[10px] text-white/35">
+                                margem +{o.minDeltaRequired}
+                                {o.warnings.some((warning) => warning.includes("ainda evolui")) ? " · linha evolutiva" : ""}
+                              </div>
                             </li>
                           ))}
                       </ul>
@@ -379,7 +498,7 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
                 {/* Perfis lado a lado */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <ProfileCard p={result.wild} label="Novo" color="#f59e0b" />
-                  {result.bestSwap && result.team.find((m) => m.name === result.bestSwap!.outName) && (
+                  {result.verdict.action !== "adicionar" && result.bestSwap && result.team.find((m) => m.name === result.bestSwap!.outName) && (
                     <ProfileCard
                       p={result.team.find((m) => m.name === result.bestSwap!.outName)!}
                       label="Candidato a sair"
