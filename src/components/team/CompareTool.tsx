@@ -235,47 +235,64 @@ function reportToneClass(tone: EncounterAnalysis["detailedReport"]["sections"][n
 function DetailedReportView({ report }: { report: EncounterAnalysis["detailedReport"] }) {
   return (
     <div className="glass rounded-2xl p-4">
-      <div className="mb-3">
+      <div>
         <h3 className="text-sm font-bold uppercase tracking-wide text-white/80">
-          Leitura completa da decisão
+          Decisão rápida
         </h3>
-        <p className="mt-1 text-sm font-semibold text-white">{report.headline}</p>
+        <p className="mt-1 text-base font-bold text-white">{report.shortRecommendation}</p>
         <p className="mt-1 text-sm text-white/65">{report.recommendation}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-        {report.sections.map((section) => (
-          <div key={section.title} className={`rounded-xl border p-3 ${reportToneClass(section.tone)}`}>
-            <h4 className="mb-2 text-xs font-black uppercase tracking-wide text-white/70">
-              {section.title}
+      <ul className="mt-3 flex flex-col gap-1.5 text-sm text-white/78">
+        {report.keyPoints.map((point) => (
+          <li key={point} className="flex gap-2">
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white/45" />
+            <span>{point}</span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/58">
+        {report.scoreExplanation}
+      </p>
+
+      <details className="mt-3">
+        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-white/45 hover:text-white/75">
+          Ver análise técnica completa
+        </summary>
+        <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+          {report.sections.map((section) => (
+            <div key={section.title} className={`rounded-xl border p-3 ${reportToneClass(section.tone)}`}>
+              <h4 className="mb-2 text-xs font-black uppercase tracking-wide text-white/70">
+                {section.title}
+              </h4>
+              <ul className="flex flex-col gap-1.5 text-sm text-white/78">
+                {section.points.map((point) => (
+                  <li key={point} className="flex gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/45" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        {report.alternatives.length > 0 && (
+          <div className="mt-3 rounded-xl border border-violet-300/20 bg-violet-500/10 p-3">
+            <h4 className="mb-2 text-xs font-black uppercase tracking-wide text-violet-200/85">
+              Caminho recomendado
             </h4>
-            <ul className="flex flex-col gap-1.5 text-sm text-white/78">
-              {section.points.map((point) => (
-                <li key={point} className="flex gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/45" />
-                  <span>{point}</span>
+            <ul className="flex flex-col gap-1.5 text-sm text-white/75">
+              {report.alternatives.map((alt) => (
+                <li key={alt} className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-200/70" />
+                  <span>{alt}</span>
                 </li>
               ))}
             </ul>
           </div>
-        ))}
-      </div>
-
-      {report.alternatives.length > 0 && (
-        <div className="mt-3 rounded-xl border border-violet-300/20 bg-violet-500/10 p-3">
-          <h4 className="mb-2 text-xs font-black uppercase tracking-wide text-violet-200/85">
-            Caminho recomendado
-          </h4>
-          <ul className="flex flex-col gap-1.5 text-sm text-white/75">
-            {report.alternatives.map((alt) => (
-              <li key={alt} className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-200/70" />
-                <span>{alt}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        )}
+      </details>
     </div>
   );
 }
@@ -317,9 +334,8 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
         🧭 Encontrei um Pokémon na rota!
       </h2>
       <p className="mb-4 text-sm text-white/60">
-        Diga qual Pokémon você encontrou. Eu faço uma análise completa: tipos,
-        status, função, golpes, sinergia com a equipe e qual a melhor troca
-        possível.
+        Diga qual Pokémon você encontrou. Eu dou a melhor sugestão primeiro e
+        deixo os detalhes técnicos recolhidos.
       </p>
 
       <form
@@ -393,14 +409,18 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
                   <p className="mt-1 text-sm opacity-90">{result.verdict.summary}</p>
                 </div>
 
-                {/* Notas */}
-                <div className="grid grid-cols-3 gap-2">
-                  <NoteBar label="Força agora" value={result.scores.now} />
-                  <NoteBar label="Força futura" value={result.scores.future} />
-                  <NoteBar label="Encaixe no time" value={result.scores.fit} />
-                </div>
-
                 <DetailedReportView report={result.detailedReport} />
+
+                <details className="glass rounded-2xl p-4">
+                  <summary className="cursor-pointer text-sm font-bold uppercase tracking-wide text-white/55 hover:text-white/80">
+                    Ver notas numéricas
+                  </summary>
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <NoteBar label="Força agora" value={result.scores.now} />
+                    <NoteBar label="Força futura" value={result.scores.future} />
+                    <NoteBar label="Encaixe no time" value={result.scores.fit} />
+                  </div>
+                </details>
 
                 {/* Melhor troca */}
                 {result.verdict.action === "adicionar" && result.teamSpace?.hasOpenSlot ? (
@@ -414,61 +434,84 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
                       {result.teamSpace.scoreAfter}.
                     </p>
                   </div>
-                ) : result.bestSwap && (
+                ) : result.bestSwap?.recommended ? (
                   <div className="glass rounded-2xl p-4">
                     <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-violet-300">
-                      {result.bestSwap.recommended ? "Troca recomendada" : "Melhor cenário calculado"}
+                      Troca recomendada
                     </h3>
-                    {result.bestSwap.recommended ? (
-                      <>
-                        <div className="flex flex-wrap items-center justify-center gap-3 text-center">
-                          <div className="flex flex-col items-center">
-                            {result.bestSwap.outImage && (
-                              <Image src={result.bestSwap.outImage} alt={result.bestSwap.outName} width={64} height={64} unoptimized className="opacity-70" />
-                            )}
-                            <span className="text-xs text-rose-300">sai {capitalize(result.bestSwap.outName)}</span>
-                          </div>
-                          <span className="text-2xl text-white/40">→</span>
-                          <div className="flex flex-col items-center">
-                            {result.wild.image && (
-                              <Image src={result.wild.image} alt={result.wild.name} width={72} height={72} unoptimized />
-                            )}
-                            <span className="text-xs text-emerald-300">entra {capitalize(result.wild.name)}</span>
-                          </div>
-                          <div className="ml-2 rounded-xl bg-emerald-500/15 px-3 py-2 text-sm font-bold text-emerald-200">
-                            Time +{result.bestSwap.delta} pts
-                            <div className="text-[10px] font-normal text-white/55">
-                              {result.bestSwap.scoreBefore} → {result.bestSwap.scoreAfter}
-                            </div>
-                            <div className="text-[10px] font-normal text-white/55">
-                              confiança {result.bestSwap.confidence}
-                            </div>
-                          </div>
-                        </div>
-                        {result.bestSwap.reasons.length > 0 && (
-                          <ul className="mt-3 flex flex-col gap-1 text-xs text-emerald-100/85">
-                            {result.bestSwap.reasons.slice(0, 3).map((reason) => (
-                              <li key={reason}>• {reason}</li>
-                            ))}
-                          </ul>
+                    <div className="flex flex-wrap items-center justify-center gap-3 text-center">
+                      <div className="flex flex-col items-center">
+                        {result.bestSwap.outImage && (
+                          <Image src={result.bestSwap.outImage} alt={result.bestSwap.outName} width={64} height={64} unoptimized className="opacity-70" />
                         )}
-                      </>
-                    ) : (
-                      <div className="text-sm text-white/70">
-                        <p>
-                          Eu não recomendo mexer no time. A melhor simulação seria tirar{" "}
-                          {capitalize(result.bestSwap.outName)}, mas o ganho é {result.bestSwap.delta > 0 ? `+${result.bestSwap.delta}` : result.bestSwap.delta}
-                          {" "}e a margem segura seria +{result.bestSwap.minDeltaRequired}.
-                        </p>
-                        {result.bestSwap.warnings.length > 0 && (
-                          <ul className="mt-2 flex flex-col gap-1 text-xs text-amber-100/85">
-                            {result.bestSwap.warnings.slice(0, 3).map((warning) => (
-                              <li key={warning}>• {warning}</li>
-                            ))}
-                          </ul>
-                        )}
+                        <span className="text-xs text-rose-300">sai {capitalize(result.bestSwap.outName)}</span>
                       </div>
+                      <span className="text-2xl text-white/40">→</span>
+                      <div className="flex flex-col items-center">
+                        {result.wild.image && (
+                          <Image src={result.wild.image} alt={result.wild.name} width={72} height={72} unoptimized />
+                        )}
+                        <span className="text-xs text-emerald-300">entra {capitalize(result.wild.name)}</span>
+                      </div>
+                      <div className="ml-2 rounded-xl bg-emerald-500/15 px-3 py-2 text-sm font-bold text-emerald-200">
+                        Time +{result.bestSwap.delta} pts
+                        <div className="text-[10px] font-normal text-white/55">
+                          {result.bestSwap.scoreBefore} → {result.bestSwap.scoreAfter}
+                        </div>
+                        <div className="text-[10px] font-normal text-white/55">
+                          confiança {result.bestSwap.confidence}
+                        </div>
+                      </div>
+                    </div>
+                    {result.bestSwap.reasons.length > 0 && (
+                      <ul className="mt-3 flex flex-col gap-1 text-xs text-emerald-100/85">
+                        {result.bestSwap.reasons.slice(0, 2).map((reason) => (
+                          <li key={reason}>• {reason}</li>
+                        ))}
+                      </ul>
                     )}
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-xs text-white/50 hover:text-white/80">
+                        Ver todas as 6 trocas
+                      </summary>
+                      <ul className="mt-2 grid grid-cols-2 gap-1 text-xs sm:grid-cols-3">
+                        {[...result.bestSwap.options]
+                          .sort((a, b) => b.delta - a.delta)
+                          .map((o) => (
+                            <li key={o.outName} className="rounded-lg bg-white/5 px-2 py-1">
+                              <div className="flex justify-between gap-2">
+                                <span className="capitalize text-white/70">sai {capitalize(o.outName)}</span>
+                                <span className={o.recommended ? "text-emerald-300" : o.delta > 0 ? "text-amber-300" : "text-white/40"}>
+                                  {o.delta > 0 ? "+" : ""}{o.delta}
+                                </span>
+                              </div>
+                              <div className="mt-0.5 text-[10px] text-white/35">
+                                margem +{o.minDeltaRequired}
+                                {o.warnings.some((warning) => warning.includes("ainda evolui")) ? " · linha evolutiva" : ""}
+                              </div>
+                            </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </div>
+                ) : result.bestSwap && (
+                  <details className="glass rounded-2xl p-4">
+                    <summary className="cursor-pointer text-sm font-bold uppercase tracking-wide text-white/55 hover:text-white/80">
+                      Ver melhor troca simulada
+                    </summary>
+                    <div className="mt-3 text-sm text-white/70">
+                      <p>
+                        Não mexe agora. A melhor simulação seria tirar {capitalize(result.bestSwap.outName)}:
+                        {" "}ganho {result.bestSwap.delta > 0 ? `+${result.bestSwap.delta}` : result.bestSwap.delta}, mas precisa de +{result.bestSwap.minDeltaRequired}.
+                      </p>
+                      {result.bestSwap.warnings.length > 0 && (
+                        <ul className="mt-2 flex flex-col gap-1 text-xs text-amber-100/85">
+                          {result.bestSwap.warnings.slice(0, 2).map((warning) => (
+                            <li key={warning}>• {warning}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     <details className="mt-3">
                       <summary className="cursor-pointer text-xs text-white/50 hover:text-white/80">
                         Ver todas as 6 trocas
@@ -492,79 +535,88 @@ export default function CompareTool({ team }: { team: TeamEntryWithDetail[] }) {
                           ))}
                       </ul>
                     </details>
-                  </div>
+                  </details>
                 )}
 
-                {/* Perfis lado a lado */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <ProfileCard p={result.wild} label="Novo" color="#f59e0b" />
-                  {result.verdict.action !== "adicionar" && result.bestSwap && result.team.find((m) => m.name === result.bestSwap!.outName) && (
-                    <ProfileCard
-                      p={result.team.find((m) => m.name === result.bestSwap!.outName)!}
-                      label="Candidato a sair"
-                      color="#8b5cf6"
-                    />
-                  )}
-                </div>
-
-                {/* Golpes */}
-                <div className="glass rounded-2xl p-4">
-                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-amber-300">
-                    Golpes do {capitalize(result.wild.name)}
-                  </h3>
-                  <WildMovesView moves={result.wildMoves} />
-                </div>
-
-                {/* Sinergia */}
-                <div className="glass rounded-2xl p-4 text-sm">
-                  <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-sky-300">
-                    Sinergia com a equipe
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    <div>
-                      <span className="text-white/55">Cobre fraqueza do time: </span>
-                      <TypeList types={result.synergy.coversTeamWeakness} empty="nenhuma" />
-                    </div>
-                    <div>
-                      <span className="text-white/55">Tipo novo no time: </span>
-                      <TypeList types={result.synergy.bringsNewType} empty="nenhum" />
-                    </div>
-                    <div>
-                      <span className="text-white/55">Cobertura ofensiva nova: </span>
-                      <TypeList types={result.synergy.addsCoverage} empty="nenhuma" />
-                    </div>
-                    <div>
-                      <span className="text-white/55">Repete tipo do time: </span>
-                      <TypeList types={result.synergy.repeatsType} empty="não" />
-                    </div>
-                    {result.synergy.teamSharedWeaknesses.length > 0 && (
-                      <div>
-                        <span className="text-white/55">Fraquezas que seu time já repete: </span>
-                        <TypeList types={result.synergy.teamSharedWeaknesses} empty="—" />
-                      </div>
+                <details className="glass rounded-2xl p-4">
+                  <summary className="cursor-pointer text-sm font-bold uppercase tracking-wide text-white/55 hover:text-white/80">
+                    Ver perfis e estatísticas
+                  </summary>
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <ProfileCard p={result.wild} label="Novo" color="#f59e0b" />
+                    {result.verdict.action !== "adicionar" && result.bestSwap && result.team.find((m) => m.name === result.bestSwap!.outName) && (
+                      <ProfileCard
+                        p={result.team.find((m) => m.name === result.bestSwap!.outName)!}
+                        label="Candidato a sair"
+                        color="#8b5cf6"
+                      />
                     )}
                   </div>
-                </div>
+                </details>
 
-                {/* Prós e contras */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="glass rounded-2xl p-4">
-                    <h3 className="mb-2 text-sm font-bold text-emerald-300">✅ Pontos positivos</h3>
-                    <ul className="flex flex-col gap-1.5 text-sm text-white/80">
-                      {result.verdict.pros.length ? result.verdict.pros.map((p, i) => (
-                        <li key={i} className="flex gap-2"><span className="text-emerald-300">•</span><span>{p}</span></li>
-                      )) : <li className="text-white/40">—</li>}
-                    </ul>
+                <details className="glass rounded-2xl p-4">
+                  <summary className="cursor-pointer text-sm font-bold uppercase tracking-wide text-white/55 hover:text-white/80">
+                    Ver detalhes extras: golpes, sinergia e prós/contras
+                  </summary>
+
+                  <div className="mt-4 flex flex-col gap-4">
+                    <div>
+                      <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-amber-300">
+                        Golpes do {capitalize(result.wild.name)}
+                      </h3>
+                      <WildMovesView moves={result.wildMoves} />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
+                      <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-sky-300">
+                        Sinergia com a equipe
+                      </h3>
+                      <div className="flex flex-col gap-2">
+                        <div>
+                          <span className="text-white/55">Cobre fraqueza do time: </span>
+                          <TypeList types={result.synergy.coversTeamWeakness} empty="nenhuma" />
+                        </div>
+                        <div>
+                          <span className="text-white/55">Tipo novo no time: </span>
+                          <TypeList types={result.synergy.bringsNewType} empty="nenhum" />
+                        </div>
+                        <div>
+                          <span className="text-white/55">Cobertura ofensiva nova: </span>
+                          <TypeList types={result.synergy.addsCoverage} empty="nenhuma" />
+                        </div>
+                        <div>
+                          <span className="text-white/55">Repete tipo do time: </span>
+                          <TypeList types={result.synergy.repeatsType} empty="não" />
+                        </div>
+                        {result.synergy.teamSharedWeaknesses.length > 0 && (
+                          <div>
+                            <span className="text-white/55">Fraquezas que seu time já repete: </span>
+                            <TypeList types={result.synergy.teamSharedWeaknesses} empty="—" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-emerald-300/15 bg-emerald-500/10 p-4">
+                        <h3 className="mb-2 text-sm font-bold text-emerald-300">Pontos positivos</h3>
+                        <ul className="flex flex-col gap-1.5 text-sm text-white/80">
+                          {result.verdict.pros.length ? result.verdict.pros.map((p, i) => (
+                            <li key={i} className="flex gap-2"><span className="text-emerald-300">•</span><span>{p}</span></li>
+                          )) : <li className="text-white/40">—</li>}
+                        </ul>
+                      </div>
+                      <div className="rounded-2xl border border-rose-300/15 bg-rose-500/10 p-4">
+                        <h3 className="mb-2 text-sm font-bold text-rose-300">Pontos negativos</h3>
+                        <ul className="flex flex-col gap-1.5 text-sm text-white/80">
+                          {result.verdict.cons.length ? result.verdict.cons.map((p, i) => (
+                            <li key={i} className="flex gap-2"><span className="text-rose-300">•</span><span>{p}</span></li>
+                          )) : <li className="text-white/40">—</li>}
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  <div className="glass rounded-2xl p-4">
-                    <h3 className="mb-2 text-sm font-bold text-rose-300">⚠️ Pontos negativos</h3>
-                    <ul className="flex flex-col gap-1.5 text-sm text-white/80">
-                      {result.verdict.cons.length ? result.verdict.cons.map((p, i) => (
-                        <li key={i} className="flex gap-2"><span className="text-rose-300">•</span><span>{p}</span></li>
-                      )) : <li className="text-white/40">—</li>}
-                    </ul>
-                  </div>
-                </div>
+                </details>
               </>
             )}
           </motion.div>

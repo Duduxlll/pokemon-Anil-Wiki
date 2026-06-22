@@ -115,6 +115,9 @@ export interface EncounterAnalysis {
   detailedReport: {
     headline: string;
     recommendation: string;
+    shortRecommendation: string;
+    keyPoints: string[];
+    scoreExplanation: string;
     sections: {
       title: string;
       tone: "good" | "warn" | "neutral";
@@ -663,6 +666,13 @@ function buildDetailedReport({
   const improved = improvedWeaknesses(teamProfiles, after);
   const wildLine = `${capitalize(wild.name)}${wild.willEvolve ? ` -> ${capitalize(wild.finalName)}` : ""}`;
   const outLine = `${capitalize(bestOut.name)}${bestOut.willEvolve ? ` -> ${capitalize(bestOut.finalName)}` : ""}`;
+  const futureGap = linePotential01(wild) - linePotential01(bestOut);
+  const wildFutureLabel = wild.willEvolve
+    ? `${capitalize(wild.name)} vira ${capitalize(wild.finalName)}`
+    : `${capitalize(wild.name)} tem bom longo prazo`;
+  const outFutureLabel = bestOut.willEvolve
+    ? `${capitalize(bestOut.name)} ainda vira ${capitalize(bestOut.finalName)}`
+    : `${capitalize(bestOut.name)} tem melhor longo prazo`;
 
   const nowPoints = [
     compareNumber("Poder no nível atual", wild.power, bestOut.power, wild.name, bestOut.name),
@@ -703,26 +713,26 @@ function buildDetailedReport({
 
   const nowPerspective =
     wild.power > bestOut.power + 20
-      ? `Agora: ${capitalize(wild.name)} ajuda mais imediatamente, mas ainda precisa compensar as brechas que abre no time.`
+      ? `Agora: ${capitalize(wild.name)} entrega mais no nível atual.`
       : bestOut.power > wild.power + 20
-      ? `Agora: ${capitalize(bestOut.name)} ainda entrega mais no nível atual, então trocar agora tende a ser precipitado.`
-      : `Agora: os dois ficam próximos; a troca só vale se o encaixe de tipos e função realmente melhorar o time.`;
+      ? `Agora: ${capitalize(bestOut.name)} ainda entrega mais no nível atual.`
+      : `Agora: ${capitalize(wild.name)} e ${capitalize(bestOut.name)} ficam próximos; o encaixe decide.`;
 
   const balancedPerspective =
     action === "trocar"
-      ? `Equilibrado: a troca por ${capitalize(bestOut.name)} passa a margem segura, então é uma recomendação confiável.`
+      ? `Equilíbrio: a troca passa a margem segura.`
       : action === "adicionar"
-      ? `Equilibrado: adicionar é bom porque não sacrifica ninguém; a decisão de tirar alguém pode ficar para depois.`
+      ? `Equilíbrio: adicionar é bom porque não sacrifica ninguém.`
       : best.delta > 0
-      ? `Equilibrado: existe ganho (+${best.delta}), mas não chega na margem segura (+${best.minDeltaRequired}); melhor não mexer na equipe principal.`
-      : `Equilibrado: a troca não melhora o bastante; manter a equipe atual é a escolha mais justa.`;
+      ? `Equilíbrio: +${best.delta} é pouco para tirar alguém com segurança.`
+      : `Equilíbrio: manter o time atual é a escolha mais justa.`;
 
   const futurePerspective =
-    linePotential01(wild) > linePotential01(bestOut) + 0.06
-      ? `Futuro: vale guardar ou treinar ${capitalize(wild.name)}, porque a linha final dele promete mais.`
-      : linePotential01(bestOut) > linePotential01(wild) + 0.06
-      ? `Futuro: mantenha ${capitalize(bestOut.name)}, porque o perfil final dele encaixa melhor no longo prazo.`
-      : `Futuro: as linhas ficam parecidas; escolha pelo que seu time precisa de tipo, cobertura e função.`;
+    futureGap > 0.06
+      ? `Futuro: ${wildFutureLabel}, então vale guardar ou treinar.`
+      : futureGap < -0.06
+      ? `Futuro: ${outFutureLabel}.`
+      : `Futuro: as linhas ficam parecidas; tipos e função decidem.`;
 
   const perspectivePoints = [nowPerspective, balancedPerspective, futurePerspective];
 
@@ -768,24 +778,76 @@ function buildDetailedReport({
 
   const bestReason =
     action === "trocar"
-      ? `A troca passa a margem segura: +${best.delta} no time contra +${best.minDeltaRequired} exigido.`
+      ? `A troca é segura: +${best.delta} no time contra +${best.minDeltaRequired} exigido.`
       : action === "adicionar"
-      ? `Como existe vaga livre, dá para adicionar sem sacrificar nenhum membro.`
+      ? `Existe vaga livre, então dá para adicionar sem sacrificar ninguém.`
       : best.delta > 0
-      ? `Existe ganho matemático (+${best.delta}), mas ele não chega na margem segura (+${best.minDeltaRequired}).`
-      : `A melhor simulação não melhora o time o suficiente para mexer na equipe.`;
+      ? `O ganho existe (+${best.delta}), mas fica abaixo da margem segura (+${best.minDeltaRequired}).`
+      : `A melhor simulação não melhora o time o suficiente para mexer.`;
 
   const recommendation =
     action === "trocar"
-      ? `Troque se você quer melhorar a equipe principal agora.`
+      ? `Faça a troca: ${capitalize(wild.name)} melhora o time no lugar de ${capitalize(bestOut.name)}.`
       : action === "adicionar"
-      ? `Adicione agora e decida a troca depois, quando a equipe estiver cheia.`
+      ? `Adicione agora; como há vaga livre, você decide troca depois.`
       : action === "guardar"
-      ? `Guarde ou treine, mas não tire alguém da equipe principal ainda.`
-      : `Mantenha sua equipe atual e só capture se você quiser usar por preferência.`;
+      ? `Guarde ou treine, mas não tire ninguém da equipe principal ainda.`
+      : `Mantenha a equipe atual; capture só por preferência ou coleção.`;
+
+  const shortRecommendation =
+    action === "trocar"
+      ? `Melhor opção: trocar ${capitalize(bestOut.name)} por ${capitalize(wild.name)}.`
+      : action === "adicionar"
+      ? `Melhor opção: adicionar ${capitalize(wild.name)} sem tirar ninguém.`
+      : action === "guardar"
+      ? `Melhor opção: guardar ${capitalize(wild.name)} e manter a equipe por enquanto.`
+      : `Melhor opção: manter sua equipe atual.`;
+
+  const scoreExplanation =
+    action === "adicionar"
+      ? `Placar: vaga livre, sem custo de troca; adicionar renderia ${teamSpace.delta >= 0 ? "+" : ""}${teamSpace.delta}.`
+      : action === "trocar"
+      ? `Placar: +${best.delta} passa a margem +${best.minDeltaRequired}; por isso a troca é segura.`
+      : best.delta > 0
+      ? `Placar: +${best.delta} fica abaixo da margem +${best.minDeltaRequired}; melhora pouco, então não vale tirar alguém.`
+      : `Placar: ${best.delta}; a melhor troca piora ou quase não melhora o time.`;
+
+  const futureSummary =
+    futureGap > 0.06
+      ? `Futuro: ${wildFutureLabel}.`
+      : futureGap < -0.06
+      ? `Futuro: ${outFutureLabel}.`
+      : `Futuro: as duas linhas são parecidas; tipos e função decidem.`;
+
+  const typeSummary =
+    opened.length
+      ? `Time: pode abrir brecha contra ${labelTypes(opened.slice(0, 3))}.`
+      : lostTypes.length
+      ? `Time: você perderia tipo único (${labelTypes(lostTypes)}).`
+      : coversTeamWeakness.length
+      ? `Time: cobre fraqueza contra ${labelTypes(coversTeamWeakness)}.`
+      : bringsNewType.length
+      ? `Time: adiciona tipo novo (${labelTypes(bringsNewType)}).`
+      : addsCoverage.length
+      ? `Time: ganha cobertura contra ${labelTypes(addsCoverage.slice(0, 3))}.`
+      : `Time: muda pouco a cobertura.`;
+
+  const nowSummary =
+    wild.power > bestOut.power + 20
+      ? `Agora: ${capitalize(wild.name)} chega mais forte no nível atual.`
+      : bestOut.power > wild.power + 20
+      ? `Agora: ${capitalize(bestOut.name)} ainda está mais pronto no nível atual.`
+      : `Agora: ${capitalize(wild.name)} e ${capitalize(bestOut.name)} são próximos; o encaixe pesa mais.`;
+
+  const keyPoints = [nowSummary, futureSummary, typeSummary];
 
   const alternatives = [bestReason];
-  const nextBest = best.reasons[0] ?? best.warnings[0];
+  const nextBest =
+    action === "trocar"
+      ? best.reasons[0]
+      : best.warnings.find((w) => w.includes("evolui") || w.includes("longo prazo")) ??
+        best.warnings[0] ??
+        best.reasons[0];
   if (nextBest) alternatives.push(nextBest);
   if (teamSpace.hasOpenSlot && action !== "adicionar") {
     alternatives.push(`Com vaga livre, o risco seria baixo: adicionar renderia ${teamSpace.delta >= 0 ? "+" : ""}${teamSpace.delta} no placar.`);
@@ -797,6 +859,9 @@ function buildDetailedReport({
   return {
     headline: `Comparação completa: ${wildLine} vs ${outLine}`,
     recommendation,
+    shortRecommendation,
+    keyPoints,
+    scoreExplanation,
     sections: [
       { title: "Resumo por objetivo", tone: action === "trocar" || action === "adicionar" ? "good" : "neutral", points: perspectivePoints },
       { title: "Agora", tone: action === "trocar" ? "good" : "neutral", points: nowPoints },
@@ -904,6 +969,15 @@ export async function analyzeEncounter(
       detailedReport: {
         headline: `Perfil completo: ${capitalize(wild.name)}${wild.willEvolve ? ` -> ${capitalize(wild.finalName)}` : ""}`,
         recommendation: `Adicione membros à equipe para comparar troca, cobertura e brechas.`,
+        shortRecommendation: `Adicione ${capitalize(wild.name)} à caixa ou equipe para comparar depois.`,
+        keyPoints: [
+          `Agora: poder estimado ${wild.power} no nível ${wild.level}.`,
+          wild.willEvolve
+            ? `Futuro: evolui até ${capitalize(wild.finalName)} (${wild.finalBst} base).`
+            : `Futuro: já está na forma final (${wild.finalBst} base).`,
+          `Tipos: ${labelTypes(wild.types)}.`,
+        ],
+        scoreExplanation: `Sem equipe principal, ainda não existe placar de troca.`,
         sections: [
           {
             title: "Agora",
