@@ -1,9 +1,11 @@
 import { getAbilityLabelPt } from "./abilityNames";
+import { getFormLabel } from "./formNames";
 import {
   EvolutionPath,
   EvolutionStage,
   MoveDetail,
   PokemonDetail,
+  PokemonForm,
   PokemonListItem,
   PokemonSummary,
   PokemonTypeName,
@@ -294,4 +296,44 @@ export async function getEvolutionPath(name: string): Promise<EvolutionPath> {
     chosen.findIndex((s) => s.name === id)
   );
   return { stages: chosen, currentIndex };
+}
+
+interface RawSpeciesVarieties {
+  varieties: { is_default: boolean; pokemon: { name: string } }[];
+}
+
+// Retorna todas as formas/variedades de um Pokémon (ex.: Marowak normal e de Alola).
+export async function getPokemonForms(name: string): Promise<PokemonForm[]> {
+  const id = String(name).toLowerCase();
+  let species: RawSpeciesVarieties;
+  try {
+    species = await apiFetch<RawSpeciesVarieties>(`/pokemon-species/${id}`);
+  } catch {
+    // o nome pode ser de uma forma (ex.: marowak-alola) — descobre a espécie base
+    const p = await apiFetch<{ species: { name: string } }>(`/pokemon/${id}`);
+    species = await apiFetch<RawSpeciesVarieties>(
+      `/pokemon-species/${p.species.name}`
+    );
+  }
+
+  const settled = await Promise.allSettled(
+    species.varieties.map(async (v) => {
+      const detail = await getPokemonDetail(v.pokemon.name);
+      const form: PokemonForm = {
+        name: detail.name,
+        label: getFormLabel(detail.name, v.is_default),
+        isDefault: v.is_default,
+        types: detail.types,
+        sprite: detail.sprite,
+        artwork: detail.artwork,
+        stats: detail.stats,
+        bst: detail.stats.reduce((sum, s) => sum + s.base, 0),
+      };
+      return form;
+    })
+  );
+
+  return settled
+    .filter((s): s is PromiseFulfilledResult<PokemonForm> => s.status === "fulfilled")
+    .map((s) => s.value);
 }

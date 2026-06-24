@@ -142,6 +142,26 @@ interface TeamInput {
   level: number;
 }
 
+export interface TeamSummary {
+  members: {
+    name: string;
+    level: number;
+    types: PokemonTypeName[];
+    role: Role;
+    weaknesses: PokemonTypeName[];
+    bst: number;
+    willEvolve: boolean;
+    finalName: string;
+    finalBst: number;
+  }[];
+  typesPresent: PokemonTypeName[];
+  typesMissing: PokemonTypeName[];
+  sharedWeaknesses: PokemonTypeName[];
+  offensiveCoverage: PokemonTypeName[];
+  uncoveredTypes: PokemonTypeName[];
+  teamScore: number;
+}
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
@@ -919,6 +939,47 @@ async function analyzeWildMoves(
 /* ------------------------------------------------------------------ */
 /* Análise principal                                                   */
 /* ------------------------------------------------------------------ */
+
+export async function summarizeTeam(team: TeamInput[]): Promise<TeamSummary> {
+  const chart = await buildTypeChart();
+  const settled = await Promise.allSettled(
+    team.map(async (t) => {
+      const detail = await getPokemonDetail(t.name);
+      return buildProfile(detail, t.level, chart, false);
+    })
+  );
+  const members = settled
+    .filter((s): s is PromiseFulfilledResult<MonProfile> => s.status === "fulfilled")
+    .map((s) => s.value);
+
+  const typesPresent = [...new Set(members.flatMap((m) => m.types))];
+  const typesMissing = TYPE_ORDER.filter((t) => !typesPresent.includes(t));
+  const sharedWeaknesses = TYPE_ORDER.filter(
+    (atk) => members.filter((m) => m.weaknesses.includes(atk)).length >= 2
+  );
+  const offensiveCoverage = [...new Set(members.flatMap((m) => m.offensiveCoverage))];
+  const uncoveredTypes = TYPE_ORDER.filter((t) => !offensiveCoverage.includes(t));
+
+  return {
+    members: members.map((m) => ({
+      name: m.name,
+      level: m.level,
+      types: m.types,
+      role: m.role,
+      weaknesses: m.weaknesses,
+      bst: m.bst,
+      willEvolve: m.willEvolve,
+      finalName: m.finalName,
+      finalBst: m.finalBst,
+    })),
+    typesPresent,
+    typesMissing,
+    sharedWeaknesses,
+    offensiveCoverage,
+    uncoveredTypes,
+    teamScore: Math.round(teamScore(members)),
+  };
+}
 
 export async function analyzeEncounter(
   wildName: string,

@@ -8,6 +8,7 @@ import { TYPE_COLORS } from "@/lib/typeMeta";
 import { getMoveLabelPt } from "@/lib/moveNames";
 import TypeBadge from "@/components/TypeBadge";
 import StatBar from "@/components/StatBar";
+import PokemonExtras from "@/components/PokemonExtras";
 
 export const revalidate = 86400;
 
@@ -220,6 +221,8 @@ export default async function PokemonPage({
           ))}
         </div>
       </section>
+
+      <PokemonExtras name={pokemon.name} />
 
       <div className="mt-8 flex justify-between text-sm font-semibold">
         {prevEntry ? (

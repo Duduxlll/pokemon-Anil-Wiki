@@ -73,6 +73,14 @@ export function useTeamStorage() {
     });
   }, []);
 
+  const updateName = useCallback((id: string, name: string) => {
+    setEntries((prev) => {
+      const next = prev.map((e) => (e.id === id ? { ...e, name } : e));
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
   const teamCount = entries.filter((e) => e.inTeam).length;
 
   const toggleInTeam = useCallback(
@@ -97,6 +105,7 @@ export function useTeamStorage() {
     addPokemon,
     removePokemon,
     updateLevel,
+    updateName,
     toggleInTeam,
     teamCount,
     maxTeamSize: MAX_TEAM_SIZE,

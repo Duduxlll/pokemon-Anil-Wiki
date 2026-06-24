@@ -9,6 +9,8 @@ import PokemonAutocomplete from "../PokemonAutocomplete";
 import PokemonMiniCard from "./PokemonMiniCard";
 import CompareTool from "./CompareTool";
 import TeamStats from "./TeamStats";
+import AiTeamAdvisor from "./AiTeamAdvisor";
+import FormPicker from "./FormPicker";
 
 export default function TeamManager() {
   const {
@@ -17,6 +19,7 @@ export default function TeamManager() {
     addPokemon,
     removePokemon,
     updateLevel,
+    updateName,
     toggleInTeam,
     teamCount,
     maxTeamSize,
@@ -121,12 +124,18 @@ export default function TeamManager() {
                           onChange={(e) => updateLevel(entry.id, Number(e.target.value) || 1)}
                           className="glass-input w-14 rounded-md px-1 py-0.5 text-center text-xs"
                         />
-                        <button
-                          onClick={() => toggleInTeam(entry.id)}
-                          className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
-                        >
-                          Tirar da equipe
-                        </button>
+                        <div className="flex gap-1.5">
+                          <FormPicker
+                            name={normalizePokemonName(entry.name)}
+                            onSelect={(f) => updateName(entry.id, f)}
+                          />
+                          <button
+                            onClick={() => toggleInTeam(entry.id)}
+                            className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 transition-colors hover:bg-white/20"
+                          >
+                            Tirar
+                          </button>
+                        </div>
                       </div>
                     }
                   />
@@ -194,6 +203,10 @@ export default function TeamManager() {
                               Remover
                             </button>
                           </div>
+                          <FormPicker
+                            name={normalizePokemonName(entry.name)}
+                            onSelect={(f) => updateName(entry.id, f)}
+                          />
                         </div>
                       }
                     />
@@ -204,6 +217,8 @@ export default function TeamManager() {
           </section>
         </div>
       </div>
+
+      <AiTeamAdvisor team={teamWithDetails} />
 
       <CompareTool team={teamWithDetails} />
 

@@ -62,6 +62,17 @@ export interface MoveDetail {
   category: string | null; // damage, ailment, net-good-stats, damage+lower...
 }
 
+export interface PokemonForm {
+  name: string;
+  label: string;
+  isDefault: boolean;
+  types: PokemonTypeName[];
+  sprite: string;
+  artwork: string | null;
+  stats: PokemonStat[];
+  bst: number;
+}
+
 export interface EvolutionStage {
   name: string;
   minLevel: number | null;
