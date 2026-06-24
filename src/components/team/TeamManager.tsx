@@ -7,9 +7,8 @@ import { usePokemonDetails } from "@/lib/usePokemonDetails";
 import { normalizePokemonName } from "@/lib/pokemonName";
 import PokemonAutocomplete from "../PokemonAutocomplete";
 import PokemonMiniCard from "./PokemonMiniCard";
-import CompareTool from "./CompareTool";
 import TeamStats from "./TeamStats";
-import AiTeamAdvisor from "./AiTeamAdvisor";
+import TrainerChat from "./TrainerChat";
 import FormPicker from "./FormPicker";
 
 export default function TeamManager() {
@@ -218,9 +217,10 @@ export default function TeamManager() {
         </div>
       </div>
 
-      <AiTeamAdvisor team={teamWithDetails} />
-
-      <CompareTool team={teamWithDetails} />
+      <TrainerChat
+        team={teamWithDetails}
+        box={box.map((b) => ({ name: normalizePokemonName(b.name), level: b.level }))}
+      />
 
       {entries.length === 0 && (
         <p className="text-center text-sm text-white/50">

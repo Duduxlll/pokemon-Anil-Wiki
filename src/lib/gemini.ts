@@ -3,9 +3,14 @@ const MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 export class GeminiError extends Error {}
 
-export async function callGemini(
+export interface ChatTurn {
+  role: "user" | "model";
+  text: string;
+}
+
+export async function callGeminiChat(
   systemInstruction: string,
-  prompt: string
+  turns: ChatTurn[]
 ): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
@@ -19,8 +24,8 @@ export async function callGemini(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+        contents: turns.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
+        generationConfig: { temperature: 0.75, maxOutputTokens: 900 },
       }),
       cache: "no-store",
     }
