@@ -69,6 +69,11 @@ export interface MapLocation {
   pokemon: { name: string; dexId: number }[];
 }
 
+export interface EncounterByRegion {
+  region: string;
+  locais: string[];
+}
+
 export interface PokemonForm {
   name: string;
   label: string;

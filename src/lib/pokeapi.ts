@@ -2,6 +2,7 @@ import { getAbilityLabelPt } from "./abilityNames";
 import { getFormLabel } from "./formNames";
 import { getLocationLabel } from "./locationNames";
 import {
+  EncounterByRegion,
   EvolutionPath,
   EvolutionStage,
   MapLocation,
@@ -375,6 +376,53 @@ export async function getKantoEncounterMap(): Promise<MapLocation[]> {
     .sort((a, b) => a.label.localeCompare(b.label, "pt"));
 
   return kantoMapCache;
+}
+
+const VERSION_REGION: Record<string, string> = {
+  red: "Kanto", blue: "Kanto", yellow: "Kanto", firered: "Kanto", leafgreen: "Kanto",
+  "lets-go-pikachu": "Kanto", "lets-go-eevee": "Kanto",
+  gold: "Johto", silver: "Johto", crystal: "Johto", heartgold: "Johto", soulsilver: "Johto",
+  ruby: "Hoenn", sapphire: "Hoenn", emerald: "Hoenn", "omega-ruby": "Hoenn", "alpha-sapphire": "Hoenn",
+  diamond: "Sinnoh", pearl: "Sinnoh", platinum: "Sinnoh", "brilliant-diamond": "Sinnoh", "shining-pearl": "Sinnoh",
+  black: "Unova", white: "Unova", "black-2": "Unova", "white-2": "Unova",
+  x: "Kalos", y: "Kalos",
+  sun: "Alola", moon: "Alola", "ultra-sun": "Alola", "ultra-moon": "Alola",
+  "legends-arceus": "Hisui",
+  sword: "Galar", shield: "Galar",
+  scarlet: "Paldea", violet: "Paldea",
+};
+
+const REGION_ORDER = [
+  "Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos", "Alola", "Hisui", "Galar", "Paldea",
+];
+
+// Busca sob demanda: onde encontrar QUALQUER Pokémon (todas as gerações),
+// agrupado pela região do jogo.
+export async function getPokemonEncounters(
+  name: string
+): Promise<EncounterByRegion[]> {
+  const id = resolvePokemonName(name);
+  const encounters = await apiFetch<RawEncounter[]>(`/pokemon/${id}/encounters`);
+
+  const byRegion = new Map<string, Set<string>>();
+  for (const e of encounters) {
+    const regions = new Set<string>();
+    for (const v of e.version_details) {
+      const r = VERSION_REGION[v.version.name];
+      if (r) regions.add(r);
+    }
+    if (regions.size === 0) continue;
+    const label = getLocationLabel(e.location_area.name);
+    for (const r of regions) {
+      if (!byRegion.has(r)) byRegion.set(r, new Set());
+      byRegion.get(r)!.add(label);
+    }
+  }
+
+  return REGION_ORDER.filter((r) => byRegion.has(r)).map((r) => ({
+    region: r,
+    locais: [...byRegion.get(r)!],
+  }));
 }
 
 interface RawEvoNode {
