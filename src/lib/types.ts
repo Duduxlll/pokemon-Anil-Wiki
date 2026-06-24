@@ -63,6 +63,12 @@ export interface MoveDetail {
   category: string | null; // damage, ailment, net-good-stats, damage+lower...
 }
 
+export interface MapLocation {
+  area: string;
+  label: string;
+  pokemon: { name: string; dexId: number }[];
+}
+
 export interface PokemonForm {
   name: string;
   label: string;

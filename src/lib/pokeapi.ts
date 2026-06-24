@@ -1,8 +1,10 @@
 import { getAbilityLabelPt } from "./abilityNames";
 import { getFormLabel } from "./formNames";
+import { getLocationLabel } from "./locationNames";
 import {
   EvolutionPath,
   EvolutionStage,
+  MapLocation,
   MoveDetail,
   PokemonDetail,
   PokemonForm,
@@ -312,6 +314,67 @@ export async function getMoveDetail(name: string): Promise<MoveDetail> {
 
 export async function getMoveDetails(names: string[]): Promise<MoveDetail[]> {
   return Promise.all(names.map((n) => getMoveDetail(n)));
+}
+
+const KANTO_VERSIONS = new Set([
+  "red",
+  "blue",
+  "yellow",
+  "firered",
+  "leafgreen",
+]);
+
+interface RawEncounter {
+  location_area: { name: string };
+  version_details: { version: { name: string } }[];
+}
+
+let kantoMapCache: MapLocation[] | null = null;
+
+// Agrega os encontros dos 151 Pokémon de Kanto por local (base: jogos de Kanto
+// da PokéAPI, que o Pokémon Anil recria).
+export async function getKantoEncounterMap(): Promise<MapLocation[]> {
+  if (kantoMapCache) return kantoMapCache;
+
+  const nameList = await getPokemonNameList();
+  const idToName = new Map(nameList.map((n) => [n.id, n.name]));
+  const ids = Array.from({ length: 151 }, (_, i) => i + 1);
+  const areaToIds = new Map<string, Set<number>>();
+
+  for (let i = 0; i < ids.length; i += SUMMARY_FETCH_CONCURRENCY) {
+    const batch = ids.slice(i, i + SUMMARY_FETCH_CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map(async (id) => ({
+        id,
+        encounters: await apiFetch<RawEncounter[]>(`/pokemon/${id}/encounters`),
+      }))
+    );
+    for (const r of results) {
+      if (r.status !== "fulfilled") continue;
+      for (const enc of r.value.encounters) {
+        const inKanto = enc.version_details.some((v) =>
+          KANTO_VERSIONS.has(v.version.name)
+        );
+        if (!inKanto) continue;
+        const area = enc.location_area.name;
+        if (!areaToIds.has(area)) areaToIds.set(area, new Set());
+        areaToIds.get(area)!.add(r.value.id);
+      }
+    }
+  }
+
+  kantoMapCache = [...areaToIds.entries()]
+    .map(([area, idSet]) => ({
+      area,
+      label: getLocationLabel(area),
+      pokemon: [...idSet]
+        .sort((a, b) => a - b)
+        .map((id) => ({ name: idToName.get(id) ?? String(id), dexId: id })),
+    }))
+    .filter((l) => l.pokemon.length > 0)
+    .sort((a, b) => a.label.localeCompare(b.label, "pt"));
+
+  return kantoMapCache;
 }
 
 interface RawEvoNode {

@@ -41,6 +41,21 @@ export function StarIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function MapIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden {...props}>
+      <path
+        d="M12 2.5c-3.3 0-6 2.6-6 5.9 0 4.2 6 12.1 6 12.1s6-7.9 6-12.1c0-3.3-2.7-5.9-6-5.9Z"
+        fill="#34d399"
+        stroke="#0b1437"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="8.4" r="2.3" fill="#fff" stroke="#0b1437" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 export function TeamIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden {...props}>

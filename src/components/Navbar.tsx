@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PokeballIcon, DropIcon, StarIcon, TeamIcon } from "./icons";
+import { PokeballIcon, DropIcon, StarIcon, TeamIcon, MapIcon } from "./icons";
 
 type NavItem = {
   href: string;
@@ -15,6 +15,7 @@ const LINKS: NavItem[] = [
   { href: "/", label: "Pokédex", icon: PokeballIcon, accent: "#ef4444" },
   { href: "/tipos", label: "Tipos", icon: DropIcon, accent: "#38bdf8" },
   { href: "/recomendador", label: "Recomendador", icon: StarIcon, accent: "#fbbf24" },
+  { href: "/mapa", label: "Mapa", icon: MapIcon, accent: "#34d399" },
   { href: "/equipe", label: "Minha Equipe", icon: TeamIcon, accent: "#a855f7" },
 ];
 
