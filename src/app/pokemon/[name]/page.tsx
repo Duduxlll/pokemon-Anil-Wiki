@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CSSProperties } from "react";
-import { getPokemonDetail, getPokemonNameList } from "@/lib/pokeapi";
+import { getPokemonDetail, getPokemonNameList, getSearchableNameList } from "@/lib/pokeapi";
 import { getCombinedDefenseProfile } from "@/lib/typeEffectiveness";
 import { TYPE_COLORS } from "@/lib/typeMeta";
 import { getMoveLabelPt } from "@/lib/moveNames";
@@ -13,7 +13,7 @@ import PokemonExtras from "@/components/PokemonExtras";
 export const revalidate = 86400;
 
 export async function generateStaticParams() {
-  const list = await getPokemonNameList();
+  const list = await getSearchableNameList();
   return list.map((p) => ({ name: p.name }));
 }
 

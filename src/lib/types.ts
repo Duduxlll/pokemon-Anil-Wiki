@@ -35,6 +35,7 @@ export interface PokemonMoveLearn {
 
 export interface PokemonSummary {
   id: number;
+  dexId: number; // número da Pokédex para exibição (formas usam o do Pokémon base)
   name: string;
   types: PokemonTypeName[];
   sprite: string;

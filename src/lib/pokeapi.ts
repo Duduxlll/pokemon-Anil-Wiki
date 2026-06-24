@@ -120,6 +120,7 @@ function toDetail(raw: RawPokemon): PokemonDetail {
 
   return {
     id: raw.id,
+    dexId: raw.id,
     name: raw.name,
     speciesName: raw.species.name,
     types: raw.types.map((t) => t.type.name as PokemonTypeName),
@@ -149,6 +150,7 @@ export async function getPokemonDetail(
 function toSummary(detail: PokemonDetail): PokemonSummary {
   return {
     id: detail.id,
+    dexId: detail.dexId,
     name: detail.name,
     types: detail.types,
     sprite: detail.sprite,
@@ -157,26 +159,86 @@ function toSummary(detail: PokemonDetail): PokemonSummary {
   };
 }
 
+// Formas regionais exibidas na Pokédex como entradas próprias.
+const REGIONAL_FORM_TAGS = ["alola", "galar", "hisui", "paldea"];
+
+function isRegionalForm(name: string): boolean {
+  return REGIONAL_FORM_TAGS.some((t) => name.includes(`-${t}`));
+}
+
+function baseSpeciesName(name: string): string {
+  for (const t of REGIONAL_FORM_TAGS) {
+    const i = name.indexOf(`-${t}`);
+    if (i >= 0) return name.slice(0, i);
+  }
+  return name;
+}
+
+let regionalFormNamesCache: string[] | null = null;
+async function getRegionalFormNames(): Promise<string[]> {
+  if (regionalFormNamesCache) return regionalFormNamesCache;
+  try {
+    const data = await apiFetch<{ results: { name: string }[] }>(
+      `/pokemon?limit=100000`
+    );
+    regionalFormNamesCache = data.results
+      .map((r) => r.name)
+      .filter(isRegionalForm);
+  } catch {
+    regionalFormNamesCache = [];
+  }
+  return regionalFormNamesCache;
+}
+
+let searchableNamesCache: PokemonListItem[] | null = null;
+export async function getSearchableNameList(): Promise<PokemonListItem[]> {
+  if (searchableNamesCache) return searchableNamesCache;
+  const base = await getPokemonNameList();
+  const formNames = await getRegionalFormNames();
+  const forms = formNames.map((name, i) => ({ id: 100000 + i, name }));
+  searchableNamesCache = [...base, ...forms];
+  return searchableNamesCache;
+}
+
 let summariesCache: PokemonSummary[] | null = null;
 let summariesPromise: Promise<PokemonSummary[]> | null = null;
 
-async function buildSummaries(): Promise<PokemonSummary[]> {
-  const ids = Array.from({ length: TOTAL_POKEMON_COUNT }, (_, i) => i + 1);
-  const summaries: PokemonSummary[] = [];
-
-  for (let i = 0; i < ids.length; i += SUMMARY_FETCH_CONCURRENCY) {
-    const batch = ids.slice(i, i + SUMMARY_FETCH_CONCURRENCY);
+async function fetchSummariesInBatches(
+  identifiers: (string | number)[]
+): Promise<PokemonDetail[]> {
+  const out: PokemonDetail[] = [];
+  for (let i = 0; i < identifiers.length; i += SUMMARY_FETCH_CONCURRENCY) {
+    const batch = identifiers.slice(i, i + SUMMARY_FETCH_CONCURRENCY);
     const results = await Promise.allSettled(
       batch.map((id) => getPokemonDetail(id))
     );
     for (const result of results) {
-      if (result.status === "fulfilled") {
-        summaries.push(toSummary(result.value));
-      }
+      if (result.status === "fulfilled") out.push(result.value);
     }
   }
+  return out;
+}
 
-  return summaries.sort((a, b) => a.id - b.id);
+async function buildSummaries(): Promise<PokemonSummary[]> {
+  const nameList = await getPokemonNameList();
+  const nameToId = new Map(nameList.map((n) => [n.name, n.id]));
+
+  const ids = Array.from({ length: TOTAL_POKEMON_COUNT }, (_, i) => i + 1);
+  const formNames = await getRegionalFormNames();
+
+  const [defaults, forms] = await Promise.all([
+    fetchSummariesInBatches(ids),
+    fetchSummariesInBatches(formNames),
+  ]);
+
+  const summaries: PokemonSummary[] = defaults.map(toSummary);
+  for (const detail of forms) {
+    const summary = toSummary(detail);
+    summary.dexId = nameToId.get(baseSpeciesName(detail.name)) ?? detail.dexId;
+    summaries.push(summary);
+  }
+
+  return summaries.sort((a, b) => a.dexId - b.dexId || a.id - b.id);
 }
 
 export async function getPokemonSummaries(): Promise<PokemonSummary[]> {

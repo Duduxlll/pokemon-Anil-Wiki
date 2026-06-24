@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { getPokemonNameList } from "@/lib/pokeapi";
+import { getSearchableNameList } from "@/lib/pokeapi";
 
 export const revalidate = 86400;
 
 export async function GET() {
-  const list = await getPokemonNameList();
+  const list = await getSearchableNameList();
   return NextResponse.json(list);
 }

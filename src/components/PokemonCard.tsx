@@ -20,7 +20,7 @@ export default function PokemonCard({ pokemon }: { pokemon: PokemonSummary }) {
       style={{ "--accent": mainColor } as CSSProperties}
     >
       <span className="absolute right-3 top-3 font-mono text-xs text-white/40">
-        #{String(pokemon.id).padStart(3, "0")}
+        #{String(pokemon.dexId).padStart(3, "0")}
       </span>
       <div
         className="flex h-28 w-28 items-center justify-center rounded-full"

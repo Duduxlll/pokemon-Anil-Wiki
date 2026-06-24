@@ -24,7 +24,7 @@ export default function PokedexGrid({
       const matchesQuery =
         query.trim() === "" ||
         normalizePokemonName(p.name).includes(normalizedQuery) ||
-        String(p.id).includes(query.trim());
+        String(p.dexId).includes(query.trim());
       const matchesType = !activeType || p.types.includes(activeType);
       return matchesQuery && matchesType;
     });
